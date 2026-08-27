@@ -4,23 +4,37 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict, Union
 import chromadb
 from chromadb.api.types import EmbeddingFunction, Documents, Embeddings
+from sklearn.feature_extraction.text import TfidfVectorizer
 
-# Custom dummy embedding function to prevent external downloads/network calls on Render
-class CustomLightweightEmbedding(EmbeddingFunction):
+# Lightweight TF-IDF embedding function that evaluates the ENTIRE input string
+class TfidfEmbeddingFunction(EmbeddingFunction):
+    def __init__(self):
+        # Fixed vocabulary size for low memory usage
+        self.vectorizer = TfidfVectorizer(max_features=64, stop_words='english')
+        # Pre-fit on common domain vocabulary so output dimensions are fixed at 64
+        sample_corpus = [
+            "data science machine learning python pandas sql statistics predictive analytics regression classification",
+            "quantitative analysis econometrics garch time series financial modeling macro risk quantitative finance",
+            "data engineering pipelines etl airflow spark snowflake data warehousing backend infrastructure",
+            "ai rag systems llm langchain vector database index artificial intelligence prompt engineering agents",
+            "full stack web development react nodejs express rest api html css javascript web applications",
+            "cloud computing devops docker kubernetes cicd terraform linux aws system architecture",
+            "ui ux design user research figma wireframing prototyping visual interaction product strategy",
+            "cybersecurity threat analysis network defense siem penetration testing security vulnerability monitoring"
+        ]
+        self.vectorizer.fit(sample_corpus)
+
     def __call__(self, input: Documents) -> Embeddings:
-        # Returns a simple deterministic vector based on document length/char codes
-        embeddings = []
-        for text in input:
-            vec = [float(ord(c)) for c in text[:16].ljust(16, ' ')]
-            embeddings.append(vec)
-        return embeddings
+        matrix = self.vectorizer.transform(input).toarray()
+        return matrix.tolist()
 
 DB_DIR = "./course_db"
-embedding_fn = CustomLightweightEmbedding()
+embedding_fn = TfidfEmbeddingFunction()
 client = chromadb.PersistentClient(path=DB_DIR)
 
+# Note: If updating embedding_fn on existing local DB, recreate collection or change name to apply new vectors
 collection = client.get_or_create_collection(
-    name="career_catalog",
+    name="career_catalog_v2",
     embedding_function=embedding_fn
 )
 
@@ -56,7 +70,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Career Roadmap & Recommendation Vector API",
     description="Vector search backend for matching student goals to tech career tracks and generating structured step-by-step career roadmaps.",
-    version="1.1.0",
+    version="1.2.0",
     lifespan=lifespan
 )
 
@@ -297,11 +311,8 @@ def get_recommendations_and_roadmaps(payload: Questionnaire):
         skills_str = ", ".join(payload.skills) if isinstance(payload.skills, list) else payload.skills
         prefs_str = ", ".join(payload.preferences) if isinstance(payload.preferences, list) else payload.preferences
 
-        query_text = (
-            f"GOALS & CAREER PIVOT: {payload.goal}. "
-            f"CURRENT/TARGET SKILLS: {skills_str}. "
-            f"LEARNING PREFERENCES: {prefs_str}."
-        )
+        # Focus query vector directly on the user's input text to maximize keyword match sensitivity
+        query_text = f"{payload.goal} {skills_str} {prefs_str}"
         
         n_res = payload.top_k if payload.top_k else 3
         results = collection.query(query_texts=[query_text], n_results=n_res)

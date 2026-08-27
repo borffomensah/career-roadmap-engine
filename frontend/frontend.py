@@ -6,6 +6,14 @@ st.set_page_config(page_title="AI Career Roadmap Generator", layout="centered")
 st.title("🎯 AI Career Roadmap Generator")
 st.write("Tell us about your background and career ambition to get your single best-matched career path.")
 
+# Supported tech keywords for validation
+TECH_KEYWORDS = [
+    "data", "machine learning", "ml", "ai", "artificial intelligence", "python", 
+    "sql", "software", "web", "frontend", "backend", "full-stack", "fullstack", 
+    "cloud", "devops", "design", "ui", "ux", "cybersecurity", "security", 
+    "engineer", "engineering", "analytics", "rag", "econometrics", "quantitative"
+]
+
 # Sentence Form Questionnaire
 user_sentence = st.text_area(
     "Describe your career goal, current skills, and preferences in full sentences:",
@@ -14,43 +22,45 @@ user_sentence = st.text_area(
 )
 
 if st.button("Generate My Roadmap", type="primary"):
-    if not user_sentence.strip():
+    query_text = user_sentence.strip().lower()
+    
+    if not query_text:
         st.warning("Please enter your career details above.")
+    # Guardrail Check: Verify if prompt contains tech-related topics
+    elif not any(keyword in query_text for keyword in TECH_KEYWORDS):
+        st.warning(
+            "⚠️ **Domain Restriction:** This roadmap generator currently specializes exclusively in "
+            "**Tech, Data Science, Artificial Intelligence, Software Engineering, DevOps, Cybersecurity, and UX Design**.\n\n"
+            "Non-tech career goals (such as Nursing, Medicine, Law, or Trades) are not in the current catalog. "
+            "Please refine your prompt to focus on a tech or data role!"
+        )
     else:
         with st.spinner("Analyzing vectors and building your roadmap..."):
-            # Local backend URL for testing (will update after Render deployment)
-            BACKEND_URL = "http://127.0.0.1:8000/recommend/"
+            BACKEND_URL = "https://career-roadmap-backend-7e6h.onrender.com/recommend/"
             
             payload = {
                 "goal": user_sentence,
                 "skills": "",
                 "preferences": "",
-                "top_k": 1  # Returns a single top match
+                "top_k": 1
             }
             
             try:
                 res = requests.post(BACKEND_URL, json=payload)
                 if res.status_code == 200:
-                    data = res.json()[0]  # Get top recommendation
+                    data = res.json()[0]
                     
-                    # ⚠️ GUARDRAIL: Check if vector similarity match score meets the threshold
-                    if data['match_score'] < 50.0:
-                        st.warning(
-                            f"⚠️ **Low Match Score ({data['match_score']}%):** "
-                            "No closely matching tech career track was found for your request. "
-                            "Please refine your query to focus on tech, data science, software, or design roles."
-                        )
-                    else:
-                        st.success(f"### Recommended Track: {data['title']} ({data['match_score']}% Match)")
-                        st.info(f"**Career Field:** {data['career_track']} | **Duration:** {data['roadmap']['estimated_duration']}")
-                        
-                        st.markdown("---")
-                        st.subheader("📍 Your Phase-by-Phase Roadmap")
-                        
-                        for phase in data['roadmap']['phases']:
-                            with st.expander(f"🔹 {phase['phase']}: {phase['focus']}", expanded=True):
-                                st.write(f"**Key Toolstack:** {', '.join(phase['key_skills'])}")
-                                st.write(f"🎯 **Milestone:** {phase['milestone']}")
+                    st.success(f"### Recommended Track: {data['title']}")
+                    st.info(f"**Career Field:** {data['career_track']} | **Duration:** {data['roadmap']['estimated_duration']}")
+                    st.write(f"**Summary:** {data['summary']}")
+                    
+                    st.markdown("---")
+                    st.subheader("📍 Your Phase-by-Phase Roadmap")
+                    
+                    for phase in data['roadmap']['phases']:
+                        with st.expander(f"🔹 {phase['phase']}: {phase['focus']}", expanded=True):
+                            st.write(f"**Key Toolstack:** {', '.join(phase['key_skills'])}")
+                            st.write(f"🎯 **Milestone:** {phase['milestone']}")
                 else:
                     st.error("Failed to generate roadmap. Please try again.")
             except Exception as e:
