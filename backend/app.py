@@ -1,16 +1,22 @@
-import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Union
 import chromadb
-from chromadb.utils.embedding_functions import ONNXMiniLM_L6_v2
+from chromadb.api.types import EmbeddingFunction, Documents, Embeddings
 
-# ---------------------------------------------------------
-# 1. DATABASE & EMBEDDING SETUP
-# ---------------------------------------------------------
+# Custom dummy embedding function to prevent external downloads/network calls on Render
+class CustomLightweightEmbedding(EmbeddingFunction):
+    def __call__(self, input: Documents) -> Embeddings:
+        # Returns a simple deterministic vector based on document length/char codes
+        embeddings = []
+        for text in input:
+            vec = [float(ord(c)) for c in text[:16].ljust(16, ' ')]
+            embeddings.append(vec)
+        return embeddings
+
 DB_DIR = "./course_db"
-embedding_fn = ONNXMiniLM_L6_v2()
+embedding_fn = CustomLightweightEmbedding()
 client = chromadb.PersistentClient(path=DB_DIR)
 
 collection = client.get_or_create_collection(
@@ -42,9 +48,6 @@ def seed_catalog():
             )
     print("🚀 Catalog successfully loaded into ChromaDB!")
 
-# ---------------------------------------------------------
-# 2. FASTAPI LIFESPAN
-# ---------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     seed_catalog()
@@ -57,9 +60,6 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# ---------------------------------------------------------
-# 3. ROADMAP KNOWLEDGE BASE
-# ---------------------------------------------------------
 ROADMAP_DATA: Dict[str, dict] = {
     "c1": {
         "career_track": "Data & AI",
@@ -263,9 +263,6 @@ ROADMAP_DATA: Dict[str, dict] = {
     }
 }
 
-# ---------------------------------------------------------
-# 4. PYDANTIC SCHEMAS
-# ---------------------------------------------------------
 class Questionnaire(BaseModel):
     goal: str
     skills: Union[List[str], str]
@@ -291,17 +288,12 @@ class RecommendationResult(BaseModel):
     summary: str
     roadmap: CareerRoadmap
 
-# ---------------------------------------------------------
-# 5. REST API ENDPOINTS
-# ---------------------------------------------------------
 @app.get("/")
 def home():
-    """Health check endpoint."""
     return {"status": "online", "message": "Career Roadmap & Recommendation Engine is operational!"}
 
 @app.post("/recommend/", response_model=List[RecommendationResult])
 def get_recommendations_and_roadmaps(payload: Questionnaire):
-    """Executes Vector Search and attaches structured step-by-step career roadmaps."""
     try:
         skills_str = ", ".join(payload.skills) if isinstance(payload.skills, list) else payload.skills
         prefs_str = ", ".join(payload.preferences) if isinstance(payload.preferences, list) else payload.preferences
