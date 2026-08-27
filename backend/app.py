@@ -314,7 +314,10 @@ def get_recommendations_and_roadmaps(payload: Questionnaire):
                 title = results["metadatas"][0][i]["title"]
                 track = results["metadatas"][0][i]["track"]
                 distance = results["distances"][0][i]
-                match_score = round(max(0.0, (1.0 - distance)) * 100, 1)
+                
+                # Updated line for accurate match percentage:
+                match_score = round(max(0.0, 100.0 / (1.0 + distance)), 1)
+                
                 doc = results["documents"][0][i]
                 
                 rm_info = ROADMAP_DATA.get(c_id, {
