@@ -1,18 +1,16 @@
 import os
-os.environ["HF_HUB_OFFLINE"] = "1"
-
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Union
 import chromadb
-from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
+from chromadb.utils.embedding_functions import ONNXMiniLM_L6_v2
 
 # ---------------------------------------------------------
 # 1. DATABASE & EMBEDDING SETUP
 # ---------------------------------------------------------
 DB_DIR = "./course_db"
-embedding_fn = SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
+embedding_fn = ONNXMiniLM_L6_v2()
 client = chromadb.PersistentClient(path=DB_DIR)
 
 collection = client.get_or_create_collection(
@@ -314,7 +312,8 @@ def get_recommendations_and_roadmaps(payload: Questionnaire):
             f"LEARNING PREFERENCES: {prefs_str}."
         )
         
-        results = collection.query(query_texts=[query_text], n_results=1)
+        n_res = payload.top_k if payload.top_k else 3
+        results = collection.query(query_texts=[query_text], n_results=n_res)
         
         output = []
         if results and results.get("ids") and len(results["ids"][0]) > 0:
