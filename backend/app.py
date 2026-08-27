@@ -284,7 +284,6 @@ class RecommendationResult(BaseModel):
     course_id: str
     title: str
     career_track: str
-    match_score: float
     summary: str
     roadmap: CareerRoadmap
 
@@ -313,11 +312,6 @@ def get_recommendations_and_roadmaps(payload: Questionnaire):
                 c_id = results["ids"][0][i]
                 title = results["metadatas"][0][i]["title"]
                 track = results["metadatas"][0][i]["track"]
-                distance = results["distances"][0][i]
-                
-                # Updated line for accurate match percentage:
-                match_score = round(max(0.0, 100.0 / (1.0 + distance)), 1)
-                
                 doc = results["documents"][0][i]
                 
                 rm_info = ROADMAP_DATA.get(c_id, {
@@ -337,7 +331,6 @@ def get_recommendations_and_roadmaps(payload: Questionnaire):
                     course_id=c_id,
                     title=title,
                     career_track=track,
-                    match_score=match_score,
                     summary=doc,
                     roadmap=CareerRoadmap(
                         estimated_duration=rm_info["estimated_duration"],
