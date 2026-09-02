@@ -67,8 +67,22 @@ if st.button("Generate My Roadmap", type="primary"):
                 st.error(f"Could not connect to server: {e}")
 
 
-st.sidebar.markdown("---")
-with st.sidebar.expander("ℹ️ System & Author Info"):
-    st.caption("**System:** Tweentech Technologies v1.0")
-    st.caption("**Engineer:** Daniel Borffo Mensah")
-    st.caption("**Tech Stack:** Python, Streamlit, Embedding, Chromadb, LangChain, Fast API")
+# --- Main Page Discreet Footer / Author Imprint ---
+st.markdown("---")
+footer_col1, footer_col2 = st.columns([3, 1])
+
+with footer_col1:
+    st.markdown(
+        "<p style='font-size: 11px; color: #555555; margin: 0;'>"
+        "<b>JBG Logistics Route Optimizer</b> &bull; Built for automated corridor analysis across Ghana."
+        "</p>", 
+        unsafe_allow_html=True
+    )
+
+with footer_col2:
+    st.markdown(
+        "<p style='font-size: 11px; color: #777777; margin: 0; text-align: right;'>"
+        "Engineered by <b>Daniel Borffo Mensah</b>"
+        "</p>", 
+        unsafe_allow_html=True
+    )
