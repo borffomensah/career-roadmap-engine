@@ -65,3 +65,10 @@ if st.button("Generate My Roadmap", type="primary"):
                     st.error("Failed to generate roadmap. Please try again.")
             except Exception as e:
                 st.error(f"Could not connect to server: {e}")
+
+
+st.sidebar.markdown("---")
+with st.sidebar.expander("ℹ️ System & Author Info"):
+    st.caption("**System:** Tweentech Technologies v1.0")
+    st.caption("**Engineer:** Daniel Borffo Mensah")
+    st.caption("**Tech Stack:** Python, Streamlit, Embedding, Chromadb, LangChain, Fast API")
