@@ -74,7 +74,7 @@ footer_col1, footer_col2 = st.columns([3, 1])
 with footer_col1:
     st.markdown(
         "<p style='font-size: 11px; color: #555555; margin: 0;'>"
-        "<b>JBG Logistics Route Optimizer</b> &bull; Built for automated corridor analysis across Ghana."
+        "<b>Tweentech Technologies</b> &bull; Career Roadmap Generator."
         "</p>", 
         unsafe_allow_html=True
     )
